@@ -6,8 +6,7 @@ from faster_whisper import WhisperModel
 import config
 from stt.recorder import AudioRecorder, microphone_name
 from stt.transcriber import NoSpeechDetected, transcribe_audio
-from tts.speaker import Speaker
-from ui.components import copy_button, status_badge
+from ui.components import browser_speech_component, copy_button, status_badge
 
 
 st.set_page_config(page_title="Voice ↔ Text", page_icon="🎙️", layout="wide")
@@ -58,9 +57,8 @@ def initialize_session():
         "transcription": "",
         "speech_text": "",
         "stt_status": "Ready",
-        "tts_status": "Ready",
+        "speech_seed": 0,
         "recorder": AudioRecorder(),
-        "speaker": Speaker(),
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -70,11 +68,6 @@ def initialize_session():
 def clear_transcription():
     st.session_state.transcription = ""
     st.session_state.stt_status = "Ready"
-
-
-def clear_speech_text():
-    st.session_state.speech_text = ""
-    st.session_state.tts_status = "Ready"
 
 
 def render_speech_to_text():
@@ -149,66 +142,23 @@ def render_speech_to_text():
         if st.session_state.transcription:
             if st.button("Use in Text to Speech", use_container_width=False):
                 st.session_state.speech_text = st.session_state.transcription
+                st.session_state.speech_seed += 1
 
 
-@st.fragment(run_every="500ms")
 def render_text_to_speech():
-    speaker = st.session_state.speaker
     with st.container(border=True):
         st.subheader("🔊  Text to Speech")
-        if speaker.is_speaking:
-            status_badge("Speaking...", active=True)
-        elif speaker.error:
-            status_badge(f"TTS engine unavailable: {speaker.error}")
-        else:
-            status_badge(st.session_state.tts_status)
-
-        st.text_area(
-            "Text to read aloud",
-            key="speech_text",
-            height=280,
-            placeholder="Type or paste text here, then click Speak.",
+        browser_speech_component(
+            initial_text=st.session_state.speech_text,
+            seed=st.session_state.speech_seed,
+            rate=config.TTS_RATE,
+            volume=config.TTS_VOLUME,
         )
-        speak_col, stop_col, clear_col = st.columns([1, 1, 1])
-        with speak_col:
-            if st.button(
-                "Speak",
-                type="primary",
-                disabled=speaker.is_speaking,
-                use_container_width=True,
-                key="speak_text",
-            ):
-                try:
-                    speaker.speak(
-                        st.session_state.speech_text,
-                        voice=config.TTS_VOICE,
-                        rate=config.TTS_RATE,
-                        volume=config.TTS_VOLUME,
-                    )
-                    st.session_state.tts_status = "Ready"
-                except Exception as exc:
-                    st.session_state.tts_status = str(exc)
-        with stop_col:
-            if st.button(
-                "Stop",
-                disabled=not speaker.is_speaking,
-                use_container_width=True,
-                key="stop_speech",
-            ):
-                speaker.stop()
-                st.session_state.tts_status = "Speech stopped"
-        with clear_col:
-            st.button(
-                "Clear",
-                on_click=clear_speech_text,
-                use_container_width=True,
-                key="clear_speech_text",
-            )
 
 
 initialize_session()
 st.title("Voice ↔ Text")
-st.caption("A private, local utility for speaking instead of typing and listening instead of reading.")
+st.caption("Dictate text or hear it read aloud.")
 
 left, right = st.columns(2, gap="large")
 with left:
@@ -217,7 +167,7 @@ with right:
     render_text_to_speech()
 
 st.markdown(
-    '<div class="privacy-note">Audio is held temporarily in memory and transcribed on this computer. '
-    'No recordings, text history, or transcripts are saved by the app.</div>',
+    '<div class="privacy-note">Audio is held temporarily for transcription. Text-to-speech uses the selected browser voice, '
+    'which may be local or online. No recordings, transcripts, or speech history are saved by the app.</div>',
     unsafe_allow_html=True,
 )

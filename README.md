@@ -1,13 +1,13 @@
 # Voice ↔ Text
 
-A lightweight personal desktop utility for speaking instead of typing and listening to text instead of reading. Speech recognition runs locally with Whisper, and text-to-speech uses the operating system's local voices through `pyttsx3`.
+A lightweight utility for speaking instead of typing and listening to text instead of reading. Speech recognition runs locally with Whisper, and text-to-speech uses the browser's speech synthesis voices.
 
 ## Features
 
 - Record from the default microphone, then transcribe locally.
 - Edit, copy, or clear the transcription; reuse the text in the speech panel.
 - Read typed or pasted text aloud, with a responsive Stop control.
-- Configure the Whisper model, microphone device, TTS voice, rate, and volume in `config.py`.
+- Configure the Whisper model and microphone device in `config.py`; choose the browser voice, rate, and volume in the speech panel.
 - No accounts, database, analytics, chat, or permanent audio/transcript history.
 
 ## Technologies
@@ -16,14 +16,14 @@ A lightweight personal desktop utility for speaking instead of typing and listen
 - Streamlit for the local dashboard
 - `sounddevice` and NumPy for temporary microphone capture
 - `faster-whisper` with CTranslate2 for on-device transcription
-- `pyttsx3` for offline system-voice speech synthesis
+- Browser SpeechSynthesis API for text-to-speech playback on the user's device
 
 ## System requirements
 
-- Windows 10/11, macOS, or Linux; a microphone and speakers/headphones for full use.
+- Windows 10/11, macOS, or Linux; a microphone, speakers/headphones, and a browser with SpeechSynthesis support.
 - A working local audio input/output device and permission to access it.
 - About 1 GB of free disk space for the default Whisper `base` model and Python packages; larger models need more space and memory.
-- Internet is needed only to install packages and download the model the first time. After model download, recognition runs locally.
+- Internet is needed to install packages and download the model the first time. Recognition runs locally after the model is downloaded; some browser speech voices may also require internet access.
 
 ## Installation (Windows)
 
@@ -48,15 +48,7 @@ Model weights are kept in the normal Hugging Face cache on your computer. To cha
 
 ## Text-to-speech setup
 
-`pyttsx3` uses voices already installed on the computer and does not download voice data. On Windows it uses SAPI5 voices; install or enable an additional Windows speech voice in system settings if desired. On Linux, install the system `espeak-ng` package if no voice is available (for Debian/Ubuntu: `sudo apt install espeak-ng`). macOS uses its built-in speech voices.
-
-To inspect installed voice identifiers for `TTS_VOICE` in `config.py`:
-
-```powershell
-python -c "import pyttsx3; e=pyttsx3.init(); print([(v.id, v.name) for v in e.getProperty('voices')])"
-```
-
-Set `TTS_VOICE` to an exact voice ID or a case-insensitive part of a voice name. Leave it as `None` to use the system default. Adjust `TTS_RATE` and `TTS_VOLUME` in `config.py` as needed.
+Text-to-speech runs in the browser through its SpeechSynthesis API, so audio plays on the device where the dashboard is open. Select an available browser voice and adjust rate and volume in the speech panel. Available voices depend on the browser and operating system; install or enable voices in your device's speech settings if needed.
 
 ## Run
 
@@ -76,11 +68,11 @@ Click **Start Speaking** to open the selected microphone as a live audio stream.
 
 ### Text to Speech
 
-Enter or paste text, then click **Speak**. A background worker hands it to the installed system speech engine. **Stop** signals that worker to stop the current utterance promptly. Text is not written to disk by the app.
+Enter or paste text, select a browser voice if desired, then click **Speak**. **Stop** cancels the current utterance. Playback is handled by the browser on the device using the dashboard; some browser voices may use an online service.
 
 ## Privacy
 
-Microphone audio and entered text are processed on this computer. Recordings are kept temporarily in process memory only until recognition finishes or the app session ends; the app does not write audio, transcriptions, or speech text to files, and has no history, database, account, analytics, or cloud sync. Transcription text stays in the current Streamlit session unless you copy it yourself. The one-time Whisper model download is the only application data fetched from the internet; it contains model weights, not your recordings or text. The operating system's speech engine is local. Note that Streamlit's local server is intended for personal use on your machine; do not expose it to a network if other users should not access the session.
+Microphone recordings are held temporarily in memory for transcription; the app does not save recordings or transcripts. Transcription text stays in the current Streamlit session unless you copy it. Speech-panel text is held in per-tab browser session storage to survive app rerenders and is not sent to the Streamlit server. The browser's selected speech service may be local or online. The app has no history, database, account, analytics, or cloud sync. Do not expose the Streamlit server to a network if other users should not access the session.
 
 ## Troubleshooting
 
@@ -88,12 +80,12 @@ Microphone audio and entered text are processed on this computer. Recordings are
 - **Audio device unavailable:** close other software holding the device, verify the OS input/output selection, then restart the app. On Linux, install the system PortAudio package if `sounddevice` cannot find PortAudio (Debian/Ubuntu: `sudo apt install libportaudio2`).
 - **Model unavailable or loading failed:** confirm the model name, internet access for the initial download, and free disk space; retry the pre-download command above. Once downloaded, the model can be used offline.
 - **No speech detected / empty recording:** record for a few seconds with the microphone selected and unmuted, then try again in a quieter room.
-- **TTS engine unavailable:** verify that the OS has a speech voice installed. On Linux, install `espeak-ng`; on Windows, check Speech settings. Restart Streamlit after changing system voices.
+- **No speech or voices listed:** use a browser that supports SpeechSynthesis and check the device's output volume and installed speech voices. Some browsers load their voice list after the page opens.
 - **Installation errors:** use 64-bit Python 3.11 and activate the virtual environment before installing requirements. CTranslate2 and audio wheels may lag the newest Python release.
 
 ## Future improvements
 
-- Optional microphone and voice selectors populated from locally installed devices/voices.
+- Optional microphone selector populated from locally installed devices.
 - Keyboard shortcuts and configurable hotkeys.
 - Additional local speech engines and model-selection controls.
 
